@@ -134,7 +134,6 @@ int main(int argc, char *argv[]) {
     bool web_page = false;
     bool real_sleep = false;
     bool old_ipv6 = false;
-    bool network = false;
 
     auto cli = (
             ("network interface" % required("-i", "--interface") & value("interface", interface), \
@@ -155,12 +154,9 @@ int main(int argc, char *argv[]) {
             "Use CPU for more precise sleep time (Only used when execution speed is too slow)" %
             option("-rs", "--real-sleep").set(real_sleep), \
             "start a web page" % option("--web").set(web_page), \
-            "custom web page url (default: 0.0.0.0:7796)" % option("--url") & value("url", web_url)
-            ) | \
-            "list interfaces" % command("list").call(listInterfaces) | \
-            ("transfer network traffic" % command("network").set(network), \
-            "interface to the ps4" % required("--interface") & value("interface", interface), \
-            "interface to the internet" % required("--interface-net") & value("interface", net_interface)
+            "custom web page url (default: 0.0.0.0:7796)" % option("--url") & value("url", web_url), \
+            "interface to the internet" % option("-in","--interface-net") & value("interface", net_interface) |\
+            "list interfaces" % command("list").call(listInterfaces)
             )
     );
 
@@ -170,10 +166,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (network) {
-        transferTraffic(interface, net_interface);
-        return 0;
-    }
+  
 
     auto offset = getFirmwareOffset(fw);
     if (offset == FIRMWARE_UNKNOWN) {
@@ -215,6 +208,12 @@ int main(int argc, char *argv[]) {
         web->run();
         return 0;
     }
+    int exp_result = static_cast<int>(exploit->run());
+    if (!exp_result && !net_interface.empty()) {
+        transferTraffic(interface, net_interface);
+        return 0;
+    }
+    return exp_result;
 
-    return exploit->run();
+    
 }
